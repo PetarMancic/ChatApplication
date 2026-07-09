@@ -1,5 +1,8 @@
+using Microsoft.Extensions.Options;
+using MongoDB.Driver;
 using WebApplication1.Hubs;
 using WebApplication1.Services;
+using WebApplication1.Settings;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -11,7 +14,17 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 builder.Services.AddSignalR();
-builder.Services.AddSingleton<IChatMessageStore, InMemoryChatMessageStore>();
+
+builder.Services.Configure<MongoSettings>(builder.Configuration.GetSection("MongoSettings"));
+builder.Services.AddSingleton(sp =>
+{
+    var mongoSettings = sp.GetRequiredService<IOptions<MongoSettings>>().Value;
+    var client = new MongoClient(mongoSettings.ConnectionString);
+    return client.GetDatabase(mongoSettings.Database);
+});
+builder.Services.AddSingleton<IChatMessageStore, MongoChatMessageStore>();
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 
 builder.Services.AddCors(options =>
 {
