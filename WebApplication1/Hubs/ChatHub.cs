@@ -1,6 +1,7 @@
+using MediatR;
 using Microsoft.AspNetCore.SignalR;
-using WebApplication1.Models;
-using WebApplication1.Services;
+using WebApplication1.Commands;
+using WebApplication1.Queries;
 
 namespace WebApplication1.Hubs;
 
@@ -8,25 +9,23 @@ public class ChatHub : Hub
 {
     private const string GeneralRoom = "general";
 
-    private readonly IChatMessageStore _store;
+    private readonly IMediator _mediator;
 
-    public ChatHub(IChatMessageStore store)
+    public ChatHub(IMediator mediator)
     {
-        _store = store;
+        _mediator = mediator;
     }
 
     public override async Task OnConnectedAsync()
     {
         await Groups.AddToGroupAsync(Context.ConnectionId, GeneralRoom);
-        await Clients.Caller.SendAsync("ReceiveHistory", _store.GetAll());
+        var history = await _mediator.Send(new GetMessageHistoryQuery());
+        await Clients.Caller.SendAsync("ReceiveHistory", history);
         await base.OnConnectedAsync();
     }
 
     public async Task SendMessage(string user, string message)
     {
-        var chatMessage = new ChatMessage(user, message, DateTime.UtcNow);
-        _store.Add(chatMessage);
-        await Clients.Group(GeneralRoom).SendAsync(
-            "ReceiveMessage", chatMessage.User, chatMessage.Message, chatMessage.Timestamp);
+        await _mediator.Send(new SendMessageCommand(user, message));
     }
 }
