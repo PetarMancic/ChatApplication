@@ -1,0 +1,20 @@
+<main>
+  <h1>Chat — M0 walking skeleton</h1>
+  <p>Ulogovan(a) kao: <strong>{{ username }}</strong></p>
+
+  <ul>
+    @for (m of messages(); track $index) {
+      <li>
+        <span>{{ m.timestamp | date:'HH:mm:ss' }}</span>
+        <strong>{{ m.user }}:</strong> {{ m.message }}
+      </li>
+    }
+  </ul>
+
+  <input
+    [(ngModel)]="draft"
+    (keyup.enter)="send()"
+    placeholder="Unesi poruku..."
+  />
+  <button (click)="send()">Pošalji</button>
+</main>
