@@ -1,0 +1,17 @@
+Ideja je da svaki milestone bude nešto što radi i može da se testira, pre nego što pređeš na sledeći. Ne prelaziš dalje dok trenutni nije stabilan.
+M0 — Setup i "hello real-time"
+Podigneš .NET 8 projekat + Angular, spojiš SignalR, i klijent primi jednu poruku od servera. Cilj: da vidiš da real-time pipeline radi, bez baze, bez auth-a. Ovo je "žica kroz sistem" (walking skeleton).
+M1 — Slanje poruka u realnom vremenu (in-memory)
+Više klijenata, jedna soba, poruka koju pošalje jedan vide svi. Još uvek bez baze — poruke žive u memoriji. Naučiš SignalR Hub metode, grupe, broadcasting.
+M2 — Persistencija (MongoDB)
+Poruke se čuvaju i učitava se istorija kad otvoriš sobu. Ovde uvodiš CQRS/MediatR: komanda SendMessage → sačuvaj → emituj event. Sad imaš pravu arhitekturu.
+M3 — Autentikacija (JWT)
+Korisnici se loguju, poruke imaju pravog autora, SignalR konekcija je autentifikovana. Naučiš kako se JWT prosleđuje SignalR-u (nije isto kao običan HTTP).
+M4 — Kanali i direktne poruke
+Više soba, 1-na-1 razgovori, lista kanala. SignalR grupe po kanalu.
+M5 — Presence (online/offline) + typing indikatori
+OnConnectedAsync/OnDisconnectedAsync, brojanje konekcija po korisniku.
+M6 — Robusnost: reconnection + optimistic UI + read receipts
+Ovde je "meso" projekta — gap recovery, ACK poruke, statusi.
+M7+ — Napredno
+Attachments, push notifikacije (React Native), Redis backplane, reactions.
