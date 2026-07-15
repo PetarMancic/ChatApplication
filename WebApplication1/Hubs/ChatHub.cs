@@ -1,10 +1,12 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using WebApplication1.Commands;
 using WebApplication1.Queries;
 
 namespace WebApplication1.Hubs;
 
+[Authorize]
 public class ChatHub : Hub
 {
     private const string GeneralRoom = "general";
@@ -24,8 +26,9 @@ public class ChatHub : Hub
         await base.OnConnectedAsync();
     }
 
-    public async Task SendMessage(string user, string message)
+    public async Task SendMessage(string message)
     {
-        await _mediator.Send(new SendMessageCommand(user, message));
+        var userName = Context.User?.Identity?.Name ?? "Unknown";
+        await _mediator.Send(new SendMessageCommand(userName, message));
     }
 }

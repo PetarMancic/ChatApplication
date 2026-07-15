@@ -1,20 +1,36 @@
-<main>
-  <h1>Chat — M0 walking skeleton</h1>
-  <p>Ulogovan(a) kao: <strong>{{ username }}</strong></p>
+<div class="app-shell">
+  @if (!auth.isAuthenticated()) {
+    <div class="login-card">
+      <h1>Chat — M3</h1>
+      <p class="subtitle">Prijavi se da nastaviš</p>
+      <div id="google-signin-button"></div>
+    </div>
+  } @else {
+    <header class="chat-header">
+      <h1>Chat — M3</h1>
+      <span class="logged-in">Ulogovan(a) kao: <strong>{{ auth.userName() }}</strong></span>
+    </header>
 
-  <ul>
-    @for (m of messages(); track $index) {
-      <li>
-        <span>{{ m.timestamp | date:'HH:mm:ss' }}</span>
-        <strong>{{ m.user }}:</strong> {{ m.message }}
-      </li>
-    }
-  </ul>
+    <ul class="messages">
+      @for (m of messages(); track $index) {
+        <li class="message" [class.own]="m.user === auth.userName()">
+          <div class="message-meta">
+            <span class="message-user">{{ m.user }}</span>
+            <span class="message-time">{{ m.timestamp | date:'HH:mm:ss' }}</span>
+          </div>
+          <div class="message-text">{{ m.message }}</div>
+        </li>
+      }
+    </ul>
 
-  <input
-    [(ngModel)]="draft"
-    (keyup.enter)="send()"
-    placeholder="Unesi poruku..."
-  />
-  <button (click)="send()">Pošalji</button>
-</main>
+    <div class="composer">
+      <input
+        [(ngModel)]="draft"
+        (keyup.enter)="send()"
+        placeholder="Unesi poruku..."
+        autocomplete="off"
+      />
+      <button (click)="send()">Pošalji</button>
+    </div>
+  }
+</div>
