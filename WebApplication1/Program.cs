@@ -34,6 +34,7 @@ builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection(
 builder.Services.AddSingleton<IUserStore, MongoUserStore>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
 builder.Services.AddSingleton<IChannelStore, MongoChannelStore>();
+builder.Services.AddSingleton<IPresenceTracker, InMemoryPresenceTracker>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 

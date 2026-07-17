@@ -38,6 +38,6 @@ public class StartDmCommandHandler : IRequestHandler<StartDmCommand, ChannelSumm
                 DmKey: dmKey,
                 CreatedAt: DateTime.UtcNow));
 
-        return new ChannelSummary(channel.Id, channel.Name, channel.Type, other.Name);
+        return new ChannelSummary(channel.Id, channel.Name, channel.Type, other.Name, other.Id);
     }
 }

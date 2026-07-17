@@ -7,6 +7,7 @@ export interface ChannelSummary {
   name: string;
   type: 'public' | 'private' | 'dm';
   displayName: string;
+  otherUserId?: string | null;
 }
 
 export interface UserSummary {

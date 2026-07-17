@@ -62,7 +62,13 @@
                 [class.active]="c.id === channels.selectedChannelId()"
                 (click)="selectChannel(c.id)"
               >
-                <span class="channel-name">{{ c.displayName }}</span>
+                @if (c.type === 'dm') {
+                  <span
+                    class="inline-block h-2 w-2 shrink-0 rounded-full"
+                    [class]="isOnline(c.otherUserId) ? 'bg-green-500' : 'bg-gray-300'"
+                  ></span>
+                }
+                <span class="channel-name grow text-left">{{ c.displayName }}</span>
                 @if (c.type === 'private') {
                   <span class="badge badge-private">privatan</span>
                 } @else if (c.type === 'dm') {
@@ -119,7 +125,11 @@
             <ul class="channel-list">
               @for (u of dmResults(); track u.id) {
                 <li class="channel-item user-result">
-                  <span class="channel-name">{{ u.name }}</span>
+                  <span
+                    class="inline-block h-2 w-2 shrink-0 rounded-full"
+                    [class]="isOnline(u.id) ? 'bg-green-500' : 'bg-gray-300'"
+                  ></span>
+                  <span class="channel-name grow text-left">{{ u.name }}</span>
                   <span class="user-actions">
                     <button class="small-button" (click)="startDm(u.id)">DM</button>
                     @if (selectedChannel()?.type === 'private') {
@@ -157,9 +167,12 @@
             }
           </ul>
 
+          <div class="h-5 shrink-0 px-6 text-xs italic leading-5 text-slate-500">{{ typingText() }}</div>
+
           <div class="composer">
             <input
               [(ngModel)]="draft"
+              (input)="onDraftInput()"
               (keyup.enter)="send()"
               placeholder="Unesi poruku..."
               autocomplete="off"
