@@ -17,6 +17,6 @@ public class BroadcastMessageHandler : INotificationHandler<MessageSentNotificat
     {
         var message = notification.Message;
         return _hubContext.Clients.Group(message.ChannelId).SendAsync(
-            "ReceiveMessage", message.ChannelId, message.User, message.SenderEmail, message.Message, message.Timestamp, cancellationToken);
+            "ReceiveMessage", message, cancellationToken);
     }
 }

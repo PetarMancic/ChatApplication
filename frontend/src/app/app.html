@@ -162,7 +162,26 @@
                   <div class="mb-0.5 text-[0.72rem] font-semibold text-white/85">{{ m.user }}</div>
                 }
                 <div class="text-[0.95rem] leading-snug">{{ m.message }}</div>
-                <div class="mt-1 text-right text-[0.68rem] text-white/75">{{ m.timestamp | date:'HH:mm:ss' }}</div>
+                <div class="mt-1 flex items-center justify-end gap-1 text-[0.68rem] text-white/75">
+                  <span>{{ m.timestamp | date:'HH:mm:ss' }}</span>
+                  @if (isMine(m) && m.status === 'sending') {
+                    <span title="Šalje se…">⏳</span>
+                  } @else if (isMine(m) && m.status === 'sent') {
+                    <span title="Poslato">✓</span>
+                  }
+                </div>
+                @if (isMine(m) && m.status === 'failed') {
+                  <div class="mt-1 flex items-center justify-end gap-2 text-[0.7rem]">
+                    <span class="font-semibold text-red-200">Nije poslato</span>
+                    <button
+                      class="rounded bg-white/20 px-2 py-0.5 font-semibold text-white hover:bg-white/30"
+                      (click)="retry(m)"
+                    >Pokušaj ponovo</button>
+                  </div>
+                }
+                @if (m.id !== null && m.id === lastSeenOwnMessageId()) {
+                  <div class="mt-0.5 text-right text-[0.65rem] italic text-white/60">Viđeno</div>
+                }
               </li>
             }
           </ul>
