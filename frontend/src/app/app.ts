@@ -30,6 +30,27 @@ export class App implements AfterViewInit {
     return !!m.senderEmail && m.senderEmail === this.auth.userEmail();
   }
 
+  protected isOnline(userId: string | null | undefined): boolean {
+    return !!userId && this.chat.onlineUsers().has(userId);
+  }
+
+  protected onDraftInput(): void {
+    const channelId = this.channels.selectedChannelId();
+    if (channelId && this.draft.trim()) {
+      this.chat.sendTyping(channelId);
+    }
+  }
+
+  protected readonly typingText = computed(() => {
+    const names = [...this.chat.typingUsers().values()];
+    switch (names.length) {
+      case 0: return '';
+      case 1: return `${names[0]} kuca…`;
+      case 2: return `${names[0]} i ${names[1]} kucaju…`;
+      default: return `${names.length} osoba kuca…`;
+    }
+  });
+
   protected readonly selectedChannel = computed(() =>
     this.channels.myChannels().find(c => c.id === this.channels.selectedChannelId()) ?? null
   );

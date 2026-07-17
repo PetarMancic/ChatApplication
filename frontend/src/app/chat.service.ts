@@ -17,6 +17,14 @@ export class ChatService {
   private activeChannelId: string | null = null;
 
   readonly messages = signal<ChatMessage[]>([]);
+  readonly onlineUsers = signal<ReadonlySet<string>>(new Set());
+  readonly typingUsers = signal<ReadonlyMap<string, string>>(new Map());
+
+  private readonly typingTimeouts = new Map<string, ReturnType<typeof setTimeout>>();
+  private lastTypingSentAt = 0;
+
+  private static readonly TYPING_SEND_INTERVAL_MS = 2000;
+  private static readonly TYPING_CLEAR_AFTER_MS = 3000;
 
   constructor() {
     this.hubConnection = new HubConnectionBuilder()
@@ -41,11 +49,53 @@ export class ChatService {
       this.messages.set(history.map(h => ({ ...h, timestamp: new Date(h.timestamp) })));
     });
 
+    this.hubConnection.on('OnlineUsers', (userIds: string[]) => {
+      this.onlineUsers.set(new Set(userIds));
+    });
+
+    this.hubConnection.on('UserOnline', (userId: string) => {
+      this.onlineUsers.update(current => new Set(current).add(userId));
+    });
+
+    this.hubConnection.on('UserOffline', (userId: string) => {
+      this.onlineUsers.update(current => {
+        const next = new Set(current);
+        next.delete(userId);
+        return next;
+      });
+    });
+
+    this.hubConnection.on('UserTyping', (channelId: string, userId: string, userName: string) => {
+      if (channelId !== this.activeChannelId) {
+        return;
+      }
+      this.typingUsers.update(current => new Map(current).set(userId, userName));
+
+      // Receiver-side timeout: clear the indicator if no ping arrives in time
+      clearTimeout(this.typingTimeouts.get(userId));
+      this.typingTimeouts.set(userId, setTimeout(() => {
+        this.typingTimeouts.delete(userId);
+        this.typingUsers.update(current => {
+          const next = new Map(current);
+          next.delete(userId);
+          return next;
+        });
+      }, ChatService.TYPING_CLEAR_AFTER_MS));
+    });
+
     this.hubConnection.onreconnected(() => {
       if (this.activeChannelId) {
         this.hubConnection.invoke('JoinChannel', this.activeChannelId);
       }
     });
+  }
+
+  private clearTypingState(): void {
+    for (const timeout of this.typingTimeouts.values()) {
+      clearTimeout(timeout);
+    }
+    this.typingTimeouts.clear();
+    this.typingUsers.set(new Map());
   }
 
   async start(): Promise<void> {
@@ -55,12 +105,15 @@ export class ChatService {
   async disconnect(): Promise<void> {
     this.activeChannelId = null;
     this.messages.set([]);
+    this.clearTypingState();
+    this.onlineUsers.set(new Set());
     await this.hubConnection.stop();
   }
 
   async joinChannel(channelId: string): Promise<void> {
     this.activeChannelId = channelId;
     this.messages.set([]);
+    this.clearTypingState();
     await this.hubConnection.invoke('JoinChannel', channelId);
   }
 
@@ -73,5 +126,15 @@ export class ChatService {
 
   async sendMessage(channelId: string, message: string): Promise<void> {
     await this.hubConnection.invoke('SendMessage', channelId, message);
+  }
+
+  /** Throttled: at most one Typing ping per interval while keys are being pressed. */
+  sendTyping(channelId: string): void {
+    const now = Date.now();
+    if (now - this.lastTypingSentAt < ChatService.TYPING_SEND_INTERVAL_MS) {
+      return;
+    }
+    this.lastTypingSentAt = now;
+    this.hubConnection.invoke('Typing', channelId).catch(() => {});
   }
 }

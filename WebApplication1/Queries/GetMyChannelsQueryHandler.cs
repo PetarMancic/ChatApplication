@@ -23,15 +23,16 @@ public class GetMyChannelsQueryHandler : IRequestHandler<GetMyChannelsQuery, IRe
         foreach (var channel in channels)
         {
             var displayName = channel.Name;
+            string? otherUserId = null;
             if (channel.Type == ChannelTypes.Dm)
             {
-                var otherId = channel.Members.FirstOrDefault(m => m != request.UserId);
-                displayName = otherId is null
+                otherUserId = channel.Members.FirstOrDefault(m => m != request.UserId);
+                displayName = otherUserId is null
                     ? "Unknown"
-                    : (await _userStore.FindByIdAsync(otherId))?.Name ?? "Unknown";
+                    : (await _userStore.FindByIdAsync(otherUserId))?.Name ?? "Unknown";
             }
 
-            summaries.Add(new ChannelSummary(channel.Id, channel.Name, channel.Type, displayName));
+            summaries.Add(new ChannelSummary(channel.Id, channel.Name, channel.Type, displayName, otherUserId));
         }
 
         return summaries;

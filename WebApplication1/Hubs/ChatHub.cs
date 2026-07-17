@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using WebApplication1.Commands;
 using WebApplication1.Queries;
+using WebApplication1.Services;
 
 namespace WebApplication1.Hubs;
 
@@ -11,10 +12,35 @@ namespace WebApplication1.Hubs;
 public class ChatHub : Hub
 {
     private readonly IMediator _mediator;
+    private readonly IPresenceTracker _presence;
 
-    public ChatHub(IMediator mediator)
+    public ChatHub(IMediator mediator, IPresenceTracker presence)
     {
         _mediator = mediator;
+        _presence = presence;
+    }
+
+    public override async Task OnConnectedAsync()
+    {
+        var userId = GetUserId();
+        if (_presence.UserConnected(userId))
+        {
+            await Clients.Others.SendAsync("UserOnline", userId);
+        }
+
+        await Clients.Caller.SendAsync("OnlineUsers", _presence.GetOnlineUserIds());
+        await base.OnConnectedAsync();
+    }
+
+    public override async Task OnDisconnectedAsync(Exception? exception)
+    {
+        var userId = GetUserId();
+        if (_presence.UserDisconnected(userId))
+        {
+            await Clients.Others.SendAsync("UserOffline", userId);
+        }
+
+        await base.OnDisconnectedAsync(exception);
     }
 
     public async Task JoinChannel(string channelId)
@@ -44,6 +70,18 @@ public class ChatHub : Hub
         var userName = Context.User?.Identity?.Name ?? "Unknown";
         var email = Context.User?.FindFirstValue(ClaimTypes.Email) ?? "";
         await _mediator.Send(new SendMessageCommand(channelId, userName, email, message));
+    }
+
+    public async Task Typing(string channelId)
+    {
+        var userId = GetUserId();
+        if (!await _mediator.Send(new IsChannelMemberQuery(channelId, userId)))
+        {
+            throw new HubException("You are not a member of this channel.");
+        }
+
+        var userName = Context.User?.Identity?.Name ?? "Unknown";
+        await Clients.OthersInGroup(channelId).SendAsync("UserTyping", channelId, userId, userName);
     }
 
     private string GetUserId() =>
