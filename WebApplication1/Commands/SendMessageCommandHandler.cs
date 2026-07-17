@@ -18,7 +18,7 @@ public class SendMessageCommandHandler : IRequestHandler<SendMessageCommand, Cha
 
     public async Task<ChatMessage> Handle(SendMessageCommand request, CancellationToken cancellationToken)
     {
-        var message = new ChatMessage(request.User, request.Message, DateTime.UtcNow);
+        var message = new ChatMessage(request.ChannelId, request.User, request.Message, DateTime.UtcNow, request.SenderEmail);
         await _store.AddAsync(message);
         await _mediator.Publish(new MessageSentNotification(message), cancellationToken);
         return message;

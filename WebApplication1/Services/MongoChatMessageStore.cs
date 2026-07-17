@@ -14,8 +14,8 @@ public class MongoChatMessageStore : IChatMessageStore
 
     public Task AddAsync(ChatMessage message) => _messages.InsertOneAsync(message);
 
-    public async Task<IReadOnlyList<ChatMessage>> GetAllAsync() =>
-        await _messages.Find(FilterDefinition<ChatMessage>.Empty)
+    public async Task<IReadOnlyList<ChatMessage>> GetByChannelAsync(string channelId) =>
+        await _messages.Find(m => m.ChannelId == channelId)
             .SortBy(m => m.Timestamp)
             .ToListAsync();
 }

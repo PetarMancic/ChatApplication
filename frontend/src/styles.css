@@ -1,5 +1,10 @@
 /* You can add global styles to this file, and also import other style files */
 
+/* Tailwind v4 — theme + utilities only (no preflight, so legacy plain-CSS screens keep their look) */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
 * {
   box-sizing: border-box;
 }

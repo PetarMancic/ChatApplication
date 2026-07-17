@@ -30,26 +30,55 @@ const STORAGE_KEY = 'chatapp_jwt';
 const GOOGLE_CLIENT_ID = '1082735551021-df9ohvbt255b4anch08l5funnselerae.apps.googleusercontent.com';
 
 const NAME_CLAIM = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name';
+const EMAIL_CLAIM = 'http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress';
 
-function decodeJwtName(token: string): string | null {
+function decodeJwtClaims(token: string): { name: string | null; email: string | null; exp: number | null } {
   try {
     const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-    return payload[NAME_CLAIM] ?? payload.name ?? null;
+    return {
+      name: payload[NAME_CLAIM] ?? payload.name ?? null,
+      email: payload[EMAIL_CLAIM] ?? payload.email ?? null,
+      exp: typeof payload.exp === 'number' ? payload.exp : null,
+    };
   } catch {
-    return null;
+    return { name: null, email: null, exp: null };
   }
 }
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  readonly isAuthenticated = signal(!!localStorage.getItem(STORAGE_KEY));
+  readonly isAuthenticated = signal(false);
   readonly userName = signal<string | null>(null);
+  readonly userEmail = signal<string | null>(null);
+
+  private expiryTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private http: HttpClient) {
     const existingToken = localStorage.getItem(STORAGE_KEY);
     if (existingToken) {
-      this.userName.set(decodeJwtName(existingToken));
+      const claims = decodeJwtClaims(existingToken);
+      if (claims.exp !== null && claims.exp * 1000 <= Date.now()) {
+        // Stored token already expired — treat as logged out
+        localStorage.removeItem(STORAGE_KEY);
+      } else {
+        this.userName.set(claims.name);
+        this.userEmail.set(claims.email);
+        this.isAuthenticated.set(true);
+        this.scheduleAutoLogout(claims.exp);
+      }
     }
+  }
+
+  /** Logs out the moment the token expires, so the UI never sits on a dead session. */
+  private scheduleAutoLogout(exp: number | null): void {
+    if (this.expiryTimer) {
+      clearTimeout(this.expiryTimer);
+      this.expiryTimer = null;
+    }
+    if (exp === null) {
+      return;
+    }
+    this.expiryTimer = setTimeout(() => this.logout(), exp * 1000 - Date.now());
   }
 
   getToken(): string | null {
@@ -74,12 +103,19 @@ export class AuthService {
     );
     localStorage.setItem(STORAGE_KEY, result.token);
     this.userName.set(result.name);
+    this.userEmail.set(result.email);
     this.isAuthenticated.set(true);
+    this.scheduleAutoLogout(decodeJwtClaims(result.token).exp);
   }
 
   logout(): void {
+    if (this.expiryTimer) {
+      clearTimeout(this.expiryTimer);
+      this.expiryTimer = null;
+    }
     localStorage.removeItem(STORAGE_KEY);
     this.userName.set(null);
+    this.userEmail.set(null);
     this.isAuthenticated.set(false);
   }
 }
