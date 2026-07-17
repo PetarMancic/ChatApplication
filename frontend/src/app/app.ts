@@ -79,7 +79,59 @@ export class App implements AfterViewInit {
         setTimeout(() => this.auth.initGoogleButton('google-signin-button'));
       }
     });
+
+    // Read pointer: advances only while the channel is open AND the tab is focused
+    effect(() => {
+      this.chat.messages();
+      this.channels.selectedChannelId();
+      this.tryMarkRead();
+    });
+    window.addEventListener('focus', () => this.tryMarkRead());
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        this.tryMarkRead();
+      }
+    });
   }
+
+  private readonly lastMarked = new Map<string, string>();
+
+  private tryMarkRead(): void {
+    const channelId = this.channels.selectedChannelId();
+    if (!channelId || !document.hasFocus()) {
+      return;
+    }
+    const withId = this.chat.messages().filter(m => m.id !== null);
+    const lastId = withId.length ? withId[withId.length - 1].id! : null;
+    if (!lastId) {
+      return;
+    }
+    const previous = this.lastMarked.get(channelId);
+    if (previous !== undefined && previous >= lastId) {
+      return;
+    }
+    this.lastMarked.set(channelId, lastId);
+    this.chat.markRead(channelId, lastId);
+  }
+
+  protected retry(m: ChatMessage): void {
+    this.chat.retryMessage(m);
+  }
+
+  /** In a DM: the id of my newest message the other person has read — shows "Viđeno". */
+  protected readonly lastSeenOwnMessageId = computed(() => {
+    const sel = this.selectedChannel();
+    if (!sel || sel.type !== 'dm' || !sel.otherUserId) {
+      return null;
+    }
+    const pointer = this.chat.readStates().get(sel.otherUserId);
+    if (!pointer) {
+      return null;
+    }
+    const seenOwn = this.chat.messages()
+      .filter(m => this.isMine(m) && m.id !== null && m.id <= pointer);
+    return seenOwn.length ? seenOwn[seenOwn.length - 1].id : null;
+  });
 
   ngAfterViewInit(): void {
     if (!this.auth.isAuthenticated()) {
@@ -153,7 +205,8 @@ export class App implements AfterViewInit {
     if (!channelId || !this.draft.trim()) {
       return;
     }
-    await this.chat.sendMessage(channelId, this.draft);
+    const text = this.draft;
     this.draft = '';
+    await this.chat.sendMessage(channelId, text);
   }
 }

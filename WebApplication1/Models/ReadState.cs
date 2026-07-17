@@ -3,7 +3,7 @@ using MongoDB.Bson.Serialization.Attributes;
 
 namespace WebApplication1.Models;
 
-public record ChatMessage(string ChannelId, string User, string Message, DateTime Timestamp, string? SenderEmail = null, string? ClientMessageId = null)
+public record ReadState(string UserId, string ChannelId, string LastReadMessageId, DateTime UpdatedAt)
 {
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
