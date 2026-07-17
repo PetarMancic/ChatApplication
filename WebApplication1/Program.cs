@@ -4,6 +4,7 @@ using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 using WebApplication1.Hubs;
+using WebApplication1.Models;
 using WebApplication1.Services;
 using WebApplication1.Settings;
 
@@ -32,6 +33,7 @@ builder.Services.Configure<GoogleAuthSettings>(builder.Configuration.GetSection(
 
 builder.Services.AddSingleton<IUserStore, MongoUserStore>();
 builder.Services.AddSingleton<IJwtTokenService, JwtTokenService>();
+builder.Services.AddSingleton<IChannelStore, MongoChannelStore>();
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssemblyContaining<Program>());
 
@@ -84,6 +86,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+// Seed the default public "general" channel and adopt pre-M4 messages that predate ChannelId.
+{
+    var channelStore = app.Services.GetRequiredService<IChannelStore>();
+    var general = await channelStore.FindByNameAndTypeAsync("general", ChannelTypes.Public)
+        ?? await channelStore.CreateAsync(new Channel(
+            Name: "general",
+            Type: ChannelTypes.Public,
+            OwnerId: "system",
+            Members: new List<string>(),
+            DmKey: null,
+            CreatedAt: DateTime.UtcNow));
+
+    var database = app.Services.GetRequiredService<IMongoDatabase>();
+    await database.GetCollection<ChatMessage>("messages").UpdateManyAsync(
+        Builders<ChatMessage>.Filter.Exists(m => m.ChannelId, false),
+        Builders<ChatMessage>.Update.Set(m => m.ChannelId, general.Id));
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

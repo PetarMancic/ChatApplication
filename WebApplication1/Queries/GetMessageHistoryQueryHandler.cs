@@ -14,5 +14,5 @@ public class GetMessageHistoryQueryHandler : IRequestHandler<GetMessageHistoryQu
     }
 
     public Task<IReadOnlyList<ChatMessage>> Handle(GetMessageHistoryQuery request, CancellationToken cancellationToken) =>
-        _store.GetAllAsync();
+        _store.GetByChannelAsync(request.ChannelId);
 }
